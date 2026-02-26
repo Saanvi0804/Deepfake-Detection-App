@@ -1,4 +1,3 @@
-// This is your confirmed contract address from Remix
 const contractAddress = "0xfE73B25ED03247990a688100B166c507b6e6459F"; 
 
 const contractABI = [
@@ -21,7 +20,6 @@ const contractABI = [
 let signer;
 let contract;
 
-// 1. Connect Logic
 document.getElementById('connectBtn').onclick = async () => {
     if (window.ethereum) {
         try {
@@ -43,7 +41,6 @@ document.getElementById('connectBtn').onclick = async () => {
     }
 };
 
-// 2. File Hashing Logic
 document.getElementById('fileInput').onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -74,7 +71,6 @@ document.getElementById('registerBtn').onclick = async () => {
         await tx.wait();
         document.getElementById('status').innerHTML = "<b style='color:green;'>✅ Successfully Registered Forever!</b>";
 
-        // --- UPDATED HISTORY LOGIC (ONLY ONE ENTRY) ---
         const list = document.getElementById('historyList');
         const fileInput = document.getElementById('fileInput');
         const fileName = fileInput.files[0] ? fileInput.files[0].name : "Unknown File";
@@ -105,7 +101,6 @@ document.getElementById('registerBtn').onclick = async () => {
     }
 };
 
-// 4. Ownership/Detection Logic
 document.getElementById('checkBtn').onclick = async () => {
     try {
         const owner = await contract.fingerprints(window.currentHash);
@@ -119,12 +114,12 @@ document.getElementById('checkBtn').onclick = async () => {
     }
 };
 
-// Add this at the very bottom of your code
+
 document.getElementById('fileInput').onclick = (e) => {
-    e.target.value = null; // This forces the "onchange" to fire even for the same filename
+    e.target.value = null; 
 };
 
-// Helper function for the history list buttons
+
 window.checkSpecificHash = async (hashToCheck) => {
     try {
         document.getElementById('status').innerText = "🔍 Verifying from history...";
