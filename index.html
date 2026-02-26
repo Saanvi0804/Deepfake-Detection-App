@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Digital Notary</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 50px; background-color: #f4f4f9; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: inline-block; }
+        button { background-color: #6200ee; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 10px; }
+        button:disabled { background-color: #ccc; }
+        #status { margin-top: 20px; color: #555; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>📜 Digital Notary</h1>
+        <button id="connectBtn">1. Connect MetaMask</button>
+        <p id="walletAddress">Status: Not Connected</p>
+        <hr>
+        <input type="file" id="fileInput"><br>
+        <p id="fileHash">Fingerprint: None</p>
+        <button id="registerBtn" disabled>2. Register Forever</button>
+        <button id="checkBtn" disabled>3. Check Ownership</button>
+        <div id="status"></div>
+        <hr>
+        <div id="historySection" style="margin-top: 20px; text-align: left;">
+            <h3>📜 Registration History</h3>
+            <ul id="historyList" style="list-style: none; padding: 0;">
+                <li style="color: #666;">No files registered in this session yet.</li>
+            </ul>
+        </div>
+    </div>
+<script src="app.js"></script>
+</body>
+</html>
