@@ -191,10 +191,9 @@ document.getElementById('registerBtn').onclick = async () => {
         }
 
         setStatus('⏳ Please confirm in MetaMask…', 'info');
-        const feeData = await state.signer.provider.getFeeData();
         const tx = await state.contract.saveFingerprint(bytes32Hash, {
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
-            maxFeePerGas: feeData.maxFeePerGas
+            maxPriorityFeePerGas: ethers.parseUnits("25", "gwei"),
+            maxFeePerGas: ethers.parseUnits("50", "gwei")
         });
 
         setStatus('⏳ Waiting for confirmation…', 'info');
