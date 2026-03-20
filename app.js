@@ -53,6 +53,10 @@ document.getElementById('fileInput').onchange = async (e) => {
 };
 
 document.getElementById('registerBtn').onclick = async () => {
+    if (!window.currentHash) {
+        document.getElementById('status').innerHTML = "<b style='color:orange;'>⚠️ Please select a file first.</b>";
+        return;
+    }
     try {
         document.getElementById('status').innerText = "⏳ Checking if file is new...";
         
@@ -97,11 +101,21 @@ document.getElementById('registerBtn').onclick = async () => {
 
     } catch (err) {
         console.error("LOG:", err);
-        document.getElementById('status').innerText = "❌ Transaction failed. Check balance or console.";
+        if (err.code === 4001 || err?.info?.error?.code === 4001) {
+            document.getElementById('status').innerText = "❌ Transaction rejected by user.";
+        } else if (err.message && err.message.toLowerCase().includes("insufficient funds")) {
+            document.getElementById('status').innerText = "❌ Insufficient funds. Please top up your wallet with test POL.";
+        } else {
+            document.getElementById('status').innerText = "❌ Transaction failed. Check console for details.";
+        }
     }
 };
 
 document.getElementById('checkBtn').onclick = async () => {
+    if (!window.currentHash) {
+        document.getElementById('status').innerHTML = "<b style='color:orange;'>⚠️ Please select a file first.</b>";
+        return;
+    }
     try {
         const owner = await contract.fingerprints(window.currentHash);
         if (owner === "0x0000000000000000000000000000000000000000") {
