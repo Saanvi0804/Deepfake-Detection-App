@@ -2,35 +2,374 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Digital Notary</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Notary — Blockchain File Verification</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 50px; background-color: #f4f4f9; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: inline-block; }
-        button { background-color: #6200ee; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 10px; }
-        button:disabled { background-color: #ccc; }
-        #status { margin-top: 20px; color: #555; }
+        :root {
+            --bg: #0d0f14;
+            --surface: #161920;
+            --border: #262b36;
+            --accent: #00e5a0;
+            --accent-dim: rgba(0,229,160,0.12);
+            --warn: #f59e0b;
+            --danger: #ef4444;
+            --text: #e8eaf0;
+            --muted: #6b7280;
+            --mono: 'Space Mono', monospace;
+            --sans: 'DM Sans', sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 32px 16px 64px;
+        }
+
+        /* grid noise texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px),
+                repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.015) 39px, rgba(255,255,255,0.015) 40px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .wrap {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        /* ── Header ── */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 36px; height: 36px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-family: var(--mono);
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text);
+        }
+
+        .testnet-badge {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: var(--warn);
+            background: rgba(245,158,11,0.12);
+            border: 1px solid rgba(245,158,11,0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        /* ── Card ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        /* ── Wallet section ── */
+        #walletSection {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        #walletAddress {
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            color: var(--muted);
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #walletAddress.connected { color: var(--accent); }
+
+        /* ── Buttons ── */
+        .btn {
+            font-family: var(--sans);
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            white-space: nowrap;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #000;
+        }
+        .btn-primary:hover:not(:disabled) { opacity: 0.85; }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-outline:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
+        .btn-sm {
+            font-size: 0.75rem;
+            padding: 6px 12px;
+        }
+
+        /* ── File drop zone ── */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+        }
+        .drop-zone input[type=file] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+        }
+        .drop-icon { font-size: 2rem; margin-bottom: 8px; }
+        .drop-label {
+            font-size: 0.875rem;
+            color: var(--muted);
+        }
+        .drop-label span { color: var(--accent); }
+
+        /* ── Hash display ── */
+        #fileHash {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 12px;
+            min-height: 20px;
+            word-break: break-all;
+        }
+        #fileHash.has-hash { color: var(--accent); }
+
+        /* ── Action row ── */
+        .action-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .action-row .btn { flex: 1; }
+
+        /* ── Status ── */
+        #status {
+            margin-top: 16px;
+            font-size: 0.875rem;
+            min-height: 24px;
+            line-height: 1.5;
+        }
+        #status a { color: var(--accent); }
+
+        /* ── History ── */
+        #historySection { margin-top: 8px; }
+
+        .history-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        #historyList {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 360px;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+
+        #historyList::-webkit-scrollbar { width: 4px; }
+        #historyList::-webkit-scrollbar-track { background: transparent; }
+        #historyList::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        .history-item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            transition: border-color 0.15s;
+        }
+        .history-item:hover { border-color: var(--accent); }
+
+        .history-item-meta { flex: 1; min-width: 0; }
+        .history-filename {
+            font-weight: 600;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .history-hash {
+            font-family: var(--mono);
+            font-size: 0.68rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+        .history-date {
+            font-size: 0.68rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+        .history-confirmed {
+            font-size: 0.68rem;
+            color: var(--accent);
+            margin-top: 2px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 24px;
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        /* ── Divider ── */
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 20px 0;
+        }
+
+        /* ── Disclaimer ── */
+        .disclaimer {
+            text-align: center;
+            font-size: 0.72rem;
+            color: var(--muted);
+            margin-top: 24px;
+            line-height: 1.6;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 480px) {
+            .card { padding: 20px 16px; }
+            .action-row { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>📜 Digital Notary</h1>
-        <button id="connectBtn">1. Connect MetaMask</button>
-        <p id="walletAddress">Status: Not Connected</p>
-        <hr>
-        <input type="file" id="fileInput"><br>
-        <p id="fileHash">Fingerprint: None</p>
-        <button id="registerBtn" disabled>2. Register Forever</button>
-        <button id="checkBtn" disabled>3. Check Ownership</button>
-        <div id="status"></div>
-        <hr>
-        <div id="historySection" style="margin-top: 20px; text-align: left;">
-            <h3>📜 Registration History</h3>
-            <ul id="historyList" style="list-style: none; padding: 0;">
-                <li style="color: #666;">No files registered in this session yet.</li>
+    <div class="wrap">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">📜</div>
+                <div class="logo-text">Digital Notary</div>
+            </div>
+            <div class="testnet-badge">AMOY TESTNET</div>
+        </header>
+
+        <!-- Wallet Card -->
+        <div class="card">
+            <div class="card-title">Wallet</div>
+            <div id="walletSection">
+                <div id="walletAddress">Not connected</div>
+                <button class="btn btn-primary" id="connectBtn">Connect MetaMask</button>
+            </div>
+        </div>
+
+        <!-- File Card -->
+        <div class="card">
+            <div class="card-title">File Fingerprint</div>
+
+            <div class="drop-zone" id="dropZone">
+                <input type="file" id="fileInput">
+                <div class="drop-icon">📂</div>
+                <div class="drop-label">Drop a file here or <span>browse</span></div>
+            </div>
+
+            <div id="fileHash">No file selected</div>
+
+            <div class="action-row">
+                <button class="btn btn-primary" id="registerBtn" disabled>Register Forever</button>
+                <button class="btn btn-outline" id="checkBtn" disabled>Check Ownership</button>
+            </div>
+
+            <div id="status"></div>
+        </div>
+
+        <!-- History Card -->
+        <div class="card">
+            <div class="history-header">
+                <div class="card-title" style="margin-bottom:0">Registration History</div>
+                <button class="btn btn-outline btn-sm" id="clearHistoryBtn">Clear</button>
+            </div>
+            <ul id="historyList">
+                <li class="empty-state">No files registered yet.</li>
             </ul>
         </div>
+
+        <p class="disclaimer">
+            This tool notarizes file integrity via SHA-256 fingerprints on Polygon Amoy (testnet).<br>
+            It detects <strong>tampering</strong> of registered files — not AI-generated deepfakes.<br>
+            Not financial or legal advice.
+        </p>
     </div>
-<script src="app.js"></script>
+
+    <script src="app.js"></script>
 </body>
 </html>
