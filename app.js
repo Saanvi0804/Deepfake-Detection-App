@@ -24,7 +24,7 @@ const state = {
     currentHash: null,
 };
 
-//Helpers
+// ── Helpers ─────────────────────────────────────────────────────────────────
 
 function sanitizeFilename(name) {
     return name.replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
@@ -38,7 +38,7 @@ function setStatus(html, type = '') {
         : html;
 }
 
-// localStorage history
+// ── localStorage history ─────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'notary_history';
 
@@ -84,9 +84,10 @@ function initHistory() {
     history.forEach(e => renderHistoryEntry(e));
 }
 
-document.addEventListener('DOMContentLoaded', initHistory);
+document.addEventListener('DOMContentLoaded', () => {
+    initHistory();
 
-//Clear history
+// ── Clear history ────────────────────────────────────────────────────────────
 
 document.getElementById('clearHistoryBtn').onclick = () => {
     if (!confirm('Clear all registration history from this browser?')) return;
@@ -95,7 +96,7 @@ document.getElementById('clearHistoryBtn').onclick = () => {
         '<li class="empty-state">No files registered yet.</li>';
 };
 
-// Connect wallet
+// ── Connect wallet ───────────────────────────────────────────────────────────
 
 document.getElementById('connectBtn').onclick = async () => {
     const addrEl = document.getElementById('walletAddress');
@@ -125,7 +126,7 @@ document.getElementById('connectBtn').onclick = async () => {
     }
 };
 
-// File hashing 
+// ── File hashing ─────────────────────────────────────────────────────────────
 
 async function hashFile(file) {
     const arrayBuffer = await file.arrayBuffer();
@@ -152,7 +153,7 @@ document.getElementById('fileInput').onchange = async (e) => {
 // Reset file input so same file can be re-selected
 document.getElementById('fileInput').onclick = (e) => { e.target.value = null; };
 
-// Drag-and-drop
+// ── Drag-and-drop ─────────────────────────────────────────────────────────────
 
 const dropZone = document.getElementById('dropZone');
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -174,7 +175,7 @@ dropZone.addEventListener('drop', async e => {
     setStatus('');
 });
 
-//Register 
+// ── Register ─────────────────────────────────────────────────────────────────
 
 document.getElementById('registerBtn').onclick = async () => {
     if (!state.currentHash) {
@@ -182,7 +183,8 @@ document.getElementById('registerBtn').onclick = async () => {
     }
     try {
         setStatus('⏳ Checking if file is already registered…', 'info');
-        const owner = await state.contract.fingerprints(state.currentHash);
+        const bytes32Hash = ethers.zeroPadValue(state.currentHash, 32);
+        const owner = await state.contract.fingerprints(bytes32Hash);
         if (owner !== "0x0000000000000000000000000000000000000000") {
             setStatus(`ℹ️ Already registered by <span style="font-family:monospace">${owner.substring(0,10)}…</span>`, 'warn');
             return;
@@ -190,7 +192,7 @@ document.getElementById('registerBtn').onclick = async () => {
 
         setStatus('⏳ Please confirm in MetaMask…', 'info');
         const feeData = await state.signer.provider.getFeeData();
-        const tx = await state.contract.saveFingerprint(state.currentHash, {
+        const tx = await state.contract.saveFingerprint(bytes32Hash, {
             maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
             maxFeePerGas: feeData.maxFeePerGas
         });
@@ -219,7 +221,7 @@ document.getElementById('registerBtn').onclick = async () => {
     }
 };
 
-// Check ownership
+// ── Check ownership ───────────────────────────────────────────────────────────
 
 document.getElementById('checkBtn').onclick = async () => {
     if (!state.currentHash) {
@@ -227,7 +229,8 @@ document.getElementById('checkBtn').onclick = async () => {
     }
     try {
         setStatus('🔍 Querying blockchain…', 'info');
-        const owner = await state.contract.fingerprints(state.currentHash);
+        const bytes32Hash = ethers.zeroPadValue(state.currentHash, 32);
+        const owner = await state.contract.fingerprints(bytes32Hash);
         if (owner === "0x0000000000000000000000000000000000000000") {
             setStatus('🚨 TAMPERED / UNKNOWN — not found in the registry.', 'err');
         } else {
@@ -238,7 +241,7 @@ document.getElementById('checkBtn').onclick = async () => {
     }
 };
 
-//Verify from history (must stay on window for inline onclick)
+// ── Verify from history (must stay on window for inline onclick) ──────────────
 
 window.checkSpecificHash = async (hashToCheck) => {
     if (!state.contract) {
@@ -256,3 +259,5 @@ window.checkSpecificHash = async (hashToCheck) => {
         setStatus('❌ Could not reach blockchain.', 'err');
     }
 };
+
+});
